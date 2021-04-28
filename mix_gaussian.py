@@ -134,7 +134,7 @@ class EM_Gaussian:
                         * np.transpose(self.X[i,:]-self.mu[j,:])) / (np.sqrt(np.linalg.det(self.sigma[j])) * 2 * np.pi) 
             for i in range(self.N):
                 ax.scatter(self.X[i, 0].tolist(), self.X[i, 1].tolist(), probability[i], c=color[int(order[i])])
-        if save_img: plt.savefig("result.png")
+        if save_img: plt.savefig("data/result1.png")
         if show_img: plt.show()
         
 if __name__ == '__main__':
