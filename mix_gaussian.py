@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+from sklearn.mixture import GaussianMixture
 
 
 class EM_Gaussian:
@@ -15,23 +15,6 @@ class EM_Gaussian:
         self.mu = None    # Average of each dimension
         self.gamma = None # Gamma of each model
         self.tol = tol
-
-    def load_data(self, X_csv_path): 
-        print("-"*20, "LOADING","-"*20)
-        data = pd.read_csv(X_csv_path)
-        self.X = np.mat(data.values.tolist())[:, 1:3]
-        self.y = np.mat(data.values.tolist())[:, 3]
-        self.N = self.X.shape[0]
-        print("Data shape:", self.X.shape)
-
-        # Random initialization
-        self.alpha=[1/self.k for _ in range(self.k)]    # Mixture coefficient initialization
-        self.gamma = np.zeros((self.N, self.k))     # Expectation that i-th data belongs to j-th model
-        # self.gamma = np.random.random((self.N, self.k)) 
-        self.mu = np.random.random((self.k, self.dim))
-        # self.mu = np.ones((self.k, self.dim))
-        # self.mu = self.X.mean(axis=0).repeat(self.k, axis=0)
-        self.sigma = [np.mat(np.identity(self.dim)) for _ in range(self.k)]
 
     def generate_data(self, 
         sigma = [np.mat([[30, 0], [0, 30]]) for _ in range(4)], 
@@ -79,8 +62,23 @@ class EM_Gaussian:
             self.alpha[j] = gamma / N    
             self.sigma[j] = gamma_y_mu / gamma   
 
-    def fit(self, iter_num=1000):
+    def fit(self, X, y, iter_num=1000):
         print("-"*20, "FITTING","-"*20)
+        self.X = X
+        self.y = y
+        self.N = self.X.shape[0]
+        print("Data shape:", self.X.shape)
+
+        # Random initialization
+        self.alpha=[1 / self.k for _ in range(self.k)]    # Mixture coefficient initialization
+        self.gamma = np.zeros((self.N, self.k))     # Expectation that i-th data belongs to j-th model
+        # self.gamma = np.random.random((self.N, self.k)) 
+        self.mu = np.random.random((self.k, self.dim))
+        # self.mu = np.ones((self.k, self.dim))
+        # self.mu = self.X.mean(axis=0).repeat(self.k, axis=0)
+        self.sigma = [np.mat(np.identity(self.dim)) for _ in range(self.k)]
+
+        # Fitting
         for i in range(iter_num):
             err, err_alpha = 0, 0    
             Old_mu = self.mu.copy()
@@ -93,23 +91,33 @@ class EM_Gaussian:
             print("Iteration:{}, err_mean:{:.5f}, err_alpha:{:.5f}".format(i+1, err, err_alpha))
             if (err<=self.tol) and (err_alpha<self.tol):  break
                        
-    def visualization(self, show_img=False, save_img=False, show_3D=True):
+    def visualize(self, show_img=False, save_img=False, show_3D=True):
         print("-"*20, "VISUALIZATION","-"*20)
         probability = np.zeros(self.N)  
 
         # Original data, c: scatter color，s: scatter size，alpha: transparent，marker: scatter shape
-        plt.subplot(221)
-        plt.scatter(self.X[:,0].tolist(), self.X[:,1].tolist(), c='b', s=25, alpha=0.4, marker='o')    
-        plt.title('Random generated data')
+        # plt.subplot(221)
+        # plt.scatter(self.X[:,0].tolist(), self.X[:,1].tolist(), c='b', s=25, alpha=0.4, marker='o')    
+        # plt.title('Random generated data')
 
         # Classified data
-        plt.subplot(222)
+        plt.subplot(221)
         plt.title('Classified data through EM')
         order = np.argmax(self.gamma, axis=1) # which model X[i,:] belongs to
         color=['b','r','k','y']
         for i in range(self.N):  
             plt.scatter(self.X[i, 0].tolist(), self.X[i, 1].tolist(), c=color[int(order[i])], s=25, alpha=0.4, marker='o') 
         
+        # Result of sklearn 
+        gmm = GaussianMixture(n_components=self.k, covariance_type='full').fit(self.X)
+        y_gmm = gmm.predict(self.X)
+        print(y_gmm)
+        plt.subplot(222)
+        plt.title('Sklearn GMM')
+        for i in range(self.N):
+            plt.scatter(self.X[i, 0].tolist(), self.X[i, 1].tolist(), c=color[int(y_gmm[i])], s=25, alpha=0.4, marker='o')
+
+
         # Ground truth
         plt.subplot(223)
         plt.title('Ground truth')
@@ -129,12 +137,16 @@ class EM_Gaussian:
         if save_img: plt.savefig("result.png")
         if show_img: plt.show()
         
-
 if __name__ == '__main__':
 
-    path = "data\GMM_EM_data_for_clustering.csv"
+    X_csv_path = "data\GMM_EM_data_for_clustering.csv"
+    k = 4
 
-    model = EM_Gaussian(4)
-    model.load_data(path)
-    model.fit(iter_num=1000)
-    model.visualization(save_img=True)
+    # Loading 
+    data = pd.read_csv(X_csv_path)
+    X = np.mat(data.values.tolist())[:, 1:3]
+    y = np.mat(data.values.tolist())[:, 3]
+
+    model = EM_Gaussian(k)
+    model.fit(X, y, iter_num=1000)
+    model.visualize(save_img=True)
