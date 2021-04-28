@@ -14,5 +14,5 @@ pip install -r requirements.txt
 
 # Getting started
 ```
-python smo.py
+python mix_gaussian.py
 ```
