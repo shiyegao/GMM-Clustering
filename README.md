@@ -1,4 +1,4 @@
-# GMM-Clustering-Algorithm-in-python
+# GMM-Clustering
 Gaussian Mixture Models Clustering Algorithm in python
 
 # Installation
