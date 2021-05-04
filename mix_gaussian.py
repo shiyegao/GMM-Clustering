@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ from sklearn.mixture import GaussianMixture
 
 class EM_Gaussian:
 
-    def __init__(self, k=4, dim=2, tol=0.0005):
+    def __init__(self, k=4, dim=2, tol=0.01):
         self.dim = dim    # Dimension of samples 
         self.X = None     # Samples
         self.k = k        # Number of Gaussian models 
@@ -70,15 +71,21 @@ class EM_Gaussian:
         print("Data shape:", self.X.shape)
 
         # Random initialization
-        self.alpha=[1 / self.k for _ in range(self.k)]    # Mixture coefficient initialization
+        self.alpha = [1 / self.k for _ in range(self.k)]    # Mixture coefficient initialization
+        # self.alpha = [np.random.random() for _ in range(self.k)]    # Mixture coefficient initialization
+
         self.gamma = np.zeros((self.N, self.k))     # Expectation that i-th data belongs to j-th model
+        # self.gamma = np.ones((self.N, self.k))
         # self.gamma = np.random.random((self.N, self.k)) 
+
         self.mu = np.random.random((self.k, self.dim))
-        # self.mu = np.ones((self.k, self.dim))
-        # self.mu = self.X.mean(axis=0).repeat(self.k, axis=0)
+        # self.mu = np.eye(self.k, self.dim)
+
+        # self.sigma = [np.random.random() * np.mat(np.identity(self.dim)) for _ in range(self.k)]
         self.sigma = [np.mat(np.identity(self.dim)) for _ in range(self.k)]
 
         # Fitting
+        t_s = time.time()
         for i in range(iter_num):
             err, err_alpha = 0, 0    
             Old_mu = self.mu.copy()
@@ -90,9 +97,12 @@ class EM_Gaussian:
                 err_alpha += abs(Old_alpha[z] - self.alpha[z])
             print("Iteration:{}, err_mean:{:.5f}, err_alpha:{:.5f}".format(i+1, err, err_alpha))
             if (err<=self.tol) and (err_alpha<self.tol):  break
-                       
+        t_end = time.time()
+        print("Fitting finished, using {} seconds".format(t_end - t_s))
+
     def visualize(self, show_img=False, save_img=False, show_3D=True):
         print("-"*20, "VISUALIZATION","-"*20)
+        t_vis = time.time()
         probability = np.zeros(self.N)  
 
         # Original data, c: scatter color，s: scatter size，alpha: transparent，marker: scatter shape
@@ -109,9 +119,11 @@ class EM_Gaussian:
             plt.scatter(self.X[i, 0].tolist(), self.X[i, 1].tolist(), c=color[int(order[i])], s=25, alpha=0.4, marker='o') 
         
         # Result of sklearn 
+        t_sk = time.time()
         gmm = GaussianMixture(n_components=self.k, covariance_type='full').fit(self.X)
         y_gmm = gmm.predict(self.X)
-        print(y_gmm)
+        t_sk_end = time.time()
+        print("Sklearn GMM finished, using {} seconds".format(t_sk_end - t_sk))
         plt.subplot(222)
         plt.title('Sklearn GMM')
         for i in range(self.N):
@@ -134,9 +146,11 @@ class EM_Gaussian:
                         * np.transpose(self.X[i,:]-self.mu[j,:])) / (np.sqrt(np.linalg.det(self.sigma[j])) * 2 * np.pi) 
             for i in range(self.N):
                 ax.scatter(self.X[i, 0].tolist(), self.X[i, 1].tolist(), probability[i], c=color[int(order[i])])
+        t_vis_end = time.time()
+        print("Visualization finished, using {} seconds".format(t_vis_end - t_vis))
         if save_img: plt.savefig("data/result1.png")
         if show_img: plt.show()
-        
+
 if __name__ == '__main__':
 
     X_csv_path = "data\GMM_EM_data_for_clustering.csv"
@@ -147,6 +161,6 @@ if __name__ == '__main__':
     X = np.mat(data.values.tolist())[:, 1:3]
     y = np.mat(data.values.tolist())[:, 3]
 
-    model = EM_Gaussian(k)
+    model = EM_Gaussian(k, tol=0.001)
     model.fit(X, y, iter_num=1000)
     model.visualize(save_img=True)

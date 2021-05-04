@@ -16,3 +16,4 @@ pip install -r requirements.txt
 ```
 python mix_gaussian.py
 ```
+You can choose different parameter initialization method to get a higher speed. Also, you can choose a proper tolerance to reduce the fitting time. 
